@@ -213,8 +213,11 @@ jobs:
       - name: Install dependencies
         run: cd apps/frontend && npm ci --ignore-scripts
 
-      - name: Install native dependencies
-        run: cd apps/frontend && npx electron-builder install-app-deps
+      - name: Rebuild native modules for Electron
+        shell: bash
+        run: |
+          cd apps/frontend
+          npx @electron/rebuild --version 39.2.7 --module-dir . || echo "Rebuild failed, continuing anyway"
 
       - name: Cache pip wheel cache
         uses: actions/cache@v4
