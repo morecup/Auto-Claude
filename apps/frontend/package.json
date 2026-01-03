@@ -138,6 +138,7 @@
   "build": {
     "appId": "com.autoclaude.ui",
     "productName": "Auto-Claude",
+    "electronVersion": "39.2.7",
     "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}",
     "publish": [
       {
