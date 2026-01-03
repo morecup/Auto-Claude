@@ -13,10 +13,9 @@ on:
         type: boolean
 
 jobs:
-  # Intel build on Intel runner for native compilation
-  # Note: macos-15-intel is the last Intel runner, supported until Fall 2027
+  # macOS x64 build (cross-compile on macos-latest)
   build-macos-intel:
-    runs-on: macos-15-intel
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -102,9 +101,9 @@ jobs:
             apps/frontend/dist/*.dmg
             apps/frontend/dist/*.zip
 
-  # Apple Silicon build on ARM64 runner for native compilation
+  # Apple Silicon build on macos-latest (ARM64)
   build-macos-arm64:
-    runs-on: macos-15
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
