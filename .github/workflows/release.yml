@@ -244,6 +244,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.WIN_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
+          SKIP_NATIVE_REBUILD: "true"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

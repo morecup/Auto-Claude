@@ -82,6 +82,12 @@ function isNodePtyBuilt() {
  * Main postinstall logic
  */
 async function main() {
+  // Skip native rebuild in CI when electron-builder handles it
+  if (process.env.SKIP_NATIVE_REBUILD === 'true') {
+    console.log('[postinstall] SKIP_NATIVE_REBUILD set, skipping native module setup.');
+    return;
+  }
+
   console.log('[postinstall] Setting up native modules for Electron...\n');
 
   // If node-pty is already built (e.g., from a previous successful install), skip
