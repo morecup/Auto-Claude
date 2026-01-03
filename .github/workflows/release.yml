@@ -39,7 +39,7 @@ jobs:
           restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
-        run: cd apps/frontend && npm ci
+        run: cd apps/frontend && npm ci --ignore-scripts
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -126,7 +126,7 @@ jobs:
           restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
-        run: cd apps/frontend && npm ci
+        run: cd apps/frontend && npm ci --ignore-scripts
 
       - name: Cache pip wheel cache
         uses: actions/cache@v4
@@ -211,7 +211,7 @@ jobs:
           restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
-        run: cd apps/frontend && npm ci
+        run: cd apps/frontend && npm ci --ignore-scripts
 
       - name: Cache pip wheel cache
         uses: actions/cache@v4
@@ -272,7 +272,7 @@ jobs:
           restore-keys: ${{ runner.os }}-npm-
 
       - name: Install dependencies
-        run: cd apps/frontend && npm ci
+        run: cd apps/frontend && npm ci --ignore-scripts
 
       - name: Setup Flatpak
         run: |
