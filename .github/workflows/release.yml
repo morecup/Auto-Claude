@@ -213,6 +213,9 @@ jobs:
       - name: Install dependencies
         run: cd apps/frontend && npm ci --ignore-scripts
 
+      - name: Install native dependencies
+        run: cd apps/frontend && npx electron-builder install-app-deps
+
       - name: Cache pip wheel cache
         uses: actions/cache@v4
         with:
@@ -316,7 +319,7 @@ jobs:
             apps/frontend/dist/*.flatpak
 
   create-release:
-    needs: [build-macos-intel, build-macos-arm64, build-windows, build-linux]
+    needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
