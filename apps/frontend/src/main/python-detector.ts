@@ -5,31 +5,81 @@ import { app } from 'electron';
 import { findHomebrewPython as findHomebrewPythonUtil } from './utils/homebrew-python';
 
 /**
+ * Whether dev should use the same bundled Python runtime as packaged builds.
+ * Useful for reproducing packaged-only issues while running `npm run dev`.
+ */
+function isDevBundledPythonEnabled(): boolean {
+  const flag = process.env.AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON;
+  return ['true', '1', 'yes', 'on'].includes((flag || '').toLowerCase());
+}
+
+/**
  * Get the path to the bundled Python executable.
- * For packaged apps, Python is bundled in the resources directory.
  *
- * @returns The path to bundled Python, or null if not found/not packaged
+ * - Packaged apps: uses `process.resourcesPath/python`
+ * - Dev mode (optional): when AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON is enabled, uses
+ *   `apps/frontend/python-runtime/<platform>-<arch>/python`
+ *
+ * @returns The path to bundled Python, or null if not found
  */
 export function getBundledPythonPath(): string | null {
-  // Only check for bundled Python in packaged apps
-  if (!app.isPackaged) {
+  const isWindows = process.platform === 'win32';
+
+  // 1) Packaged app: resources directory
+  if (app.isPackaged) {
+    const resourcesPath = process.resourcesPath;
+
+    // Bundled Python location in packaged app
+    const pythonPath = isWindows
+      ? path.join(resourcesPath, 'python', 'python.exe')
+      : path.join(resourcesPath, 'python', 'bin', 'python3');
+
+    if (existsSync(pythonPath)) {
+      console.log(`[Python] Found bundled Python at: ${pythonPath}`);
+      return pythonPath;
+    }
+
+    console.log(`[Python] Bundled Python not found at: ${pythonPath}`);
     return null;
   }
 
-  const resourcesPath = process.resourcesPath;
-  const isWindows = process.platform === 'win32';
-
-  // Bundled Python location in packaged app
-  const pythonPath = isWindows
-    ? path.join(resourcesPath, 'python', 'python.exe')
-    : path.join(resourcesPath, 'python', 'bin', 'python3');
-
-  if (existsSync(pythonPath)) {
-    console.log(`[Python] Found bundled Python at: ${pythonPath}`);
-    return pythonPath;
+  // 2) Dev override: use python-runtime folder (same artifacts used for packaging)
+  if (!isDevBundledPythonEnabled()) {
+    return null;
   }
 
-  console.log(`[Python] Bundled Python not found at: ${pythonPath}`);
+  const platform = process.platform === 'win32'
+    ? 'win'
+    : process.platform === 'darwin'
+      ? 'mac'
+      : 'linux';
+
+  const arch = process.arch;
+
+  const runtimeRoots = [
+    // Typical dev path: apps/frontend/out/main -> apps/frontend/python-runtime
+    path.resolve(__dirname, '..', '..', 'python-runtime'),
+    // app.getAppPath() is often apps/frontend in dev
+    path.resolve(app.getAppPath(), 'python-runtime'),
+    // Fallback: repo root -> apps/frontend/python-runtime
+    path.resolve(app.getAppPath(), 'apps', 'frontend', 'python-runtime'),
+    path.resolve(process.cwd(), 'python-runtime'),
+    path.resolve(process.cwd(), 'apps', 'frontend', 'python-runtime'),
+  ];
+
+  for (const root of runtimeRoots) {
+    const base = path.join(root, `${platform}-${arch}`, 'python');
+    const pythonPath = isWindows
+      ? path.join(base, 'python.exe')
+      : path.join(base, 'bin', 'python3');
+
+    if (existsSync(pythonPath)) {
+      console.log(`[Python] Found dev bundled Python at: ${pythonPath}`);
+      return pythonPath;
+    }
+  }
+
+  console.log('[Python] Dev bundled Python not found (AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON enabled)');
   return null;
 }
 

@@ -91,24 +91,71 @@ export class PythonEnvManager extends EventEmitter {
     return venvPython ? existsSync(venvPython) : false;
   }
 
-  /**
-   * Get the path to bundled site-packages (for packaged apps).
-   * These are pre-installed during the build process.
-   */
-  private getBundledSitePackagesPath(): string | null {
-    if (!app.isPackaged) {
+  private isDevBundledPythonEnabled(): boolean {
+    // Only meaningful in dev mode
+    if (app.isPackaged) return false;
+
+    const flag = process.env.AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON;
+    return ['true', '1', 'yes', 'on'].includes((flag || '').toLowerCase());
+  }
+
+  private getDevBundledSitePackagesPath(): string | null {
+    if (!this.isDevBundledPythonEnabled()) {
       return null;
     }
 
-    const sitePackagesPath = path.join(process.resourcesPath, 'python-site-packages');
+    const platform = process.platform === 'win32'
+      ? 'win'
+      : process.platform === 'darwin'
+        ? 'mac'
+        : 'linux';
 
-    if (existsSync(sitePackagesPath)) {
-      console.log(`[PythonEnvManager] Found bundled site-packages at: ${sitePackagesPath}`);
-      return sitePackagesPath;
+    const arch = process.arch;
+
+    const runtimeRoots = [
+      // Typical dev path: apps/frontend/out/main -> apps/frontend/python-runtime
+      path.resolve(__dirname, '..', '..', 'python-runtime'),
+      // app.getAppPath() is often apps/frontend in dev
+      path.resolve(app.getAppPath(), 'python-runtime'),
+      // Fallback: repo root -> apps/frontend/python-runtime
+      path.resolve(app.getAppPath(), 'apps', 'frontend', 'python-runtime'),
+      path.resolve(process.cwd(), 'python-runtime'),
+      path.resolve(process.cwd(), 'apps', 'frontend', 'python-runtime'),
+    ];
+
+    for (const root of runtimeRoots) {
+      const sitePackagesPath = path.join(root, `${platform}-${arch}`, 'site-packages');
+      if (existsSync(sitePackagesPath)) {
+        console.log(`[PythonEnvManager] Found dev bundled site-packages at: ${sitePackagesPath}`);
+        return sitePackagesPath;
+      }
     }
 
-    console.log(`[PythonEnvManager] Bundled site-packages not found at: ${sitePackagesPath}`);
+    console.log('[PythonEnvManager] Dev bundled site-packages not found (AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON enabled)');
     return null;
+  }
+
+  /**
+   * Get the path to bundled site-packages.
+   *
+   * - Packaged apps: uses `process.resourcesPath/python-site-packages`
+   * - Dev mode (optional): when AUTO_CLAUDE_DEV_USE_BUNDLED_PYTHON is enabled, uses
+   *   `apps/frontend/python-runtime/<platform>-<arch>/site-packages`
+   */
+  private getBundledSitePackagesPath(): string | null {
+    if (app.isPackaged) {
+      const sitePackagesPath = path.join(process.resourcesPath, 'python-site-packages');
+
+      if (existsSync(sitePackagesPath)) {
+        console.log(`[PythonEnvManager] Found bundled site-packages at: ${sitePackagesPath}`);
+        return sitePackagesPath;
+      }
+
+      console.log(`[PythonEnvManager] Bundled site-packages not found at: ${sitePackagesPath}`);
+      return null;
+    }
+
+    return this.getDevBundledSitePackagesPath();
   }
 
   /**
@@ -456,9 +503,11 @@ if sys.version_info >= (3, 12):
     console.warn('[PythonEnvManager] Initializing with path:', autoBuildSourcePath);
 
     try {
-      // For packaged apps, try to use bundled packages first (no pip install needed!)
-      if (app.isPackaged && this.hasBundledPackages()) {
-        console.warn('[PythonEnvManager] Using bundled Python packages (no pip install needed)');
+      const devBundled = this.isDevBundledPythonEnabled();
+
+      // For packaged apps (and optional dev override), try to use bundled packages first (no pip install needed!)
+      if ((app.isPackaged || devBundled) && this.hasBundledPackages()) {
+        console.warn(`[PythonEnvManager] Using bundled Python packages${devBundled ? ' (dev override)' : ''} (no pip install needed)`);
 
         const bundledPython = getBundledPythonPath();
         const bundledSitePackages = this.getBundledSitePackagesPath();
