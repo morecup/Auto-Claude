@@ -630,9 +630,28 @@ if sys.version_info >= (3, 12):
       PYTHONNOUSERSITE: '1',
     };
 
-    // Set PYTHONPATH to our site-packages
+    // Set PYTHONPATH to our site-packages.
+    //
+    // Note: when using a "detached" site-packages directory (bundled packages),
+    // Python does NOT automatically process .pth files in that directory.
+    // On Windows, this breaks pywin32 (pywintypes) imports unless we add the
+    // expected subpaths explicitly.
     if (this.sitePackagesPath) {
-      env.PYTHONPATH = this.sitePackagesPath;
+      const pythonPathEntries = [this.sitePackagesPath];
+
+      if (process.platform === 'win32') {
+        const win32Dir = path.join(this.sitePackagesPath, 'win32');
+        const win32LibDir = path.join(win32Dir, 'lib');
+        const pywin32System32Dir = path.join(this.sitePackagesPath, 'pywin32_system32');
+
+        for (const p of [win32Dir, win32LibDir, pywin32System32Dir]) {
+          if (existsSync(p)) {
+            pythonPathEntries.push(p);
+          }
+        }
+      }
+
+      env.PYTHONPATH = pythonPathEntries.join(path.delimiter);
     }
 
     return env;

@@ -154,6 +154,13 @@ async def run_with_sdk(
     ensure_claude_code_oauth_token()
 
     system_prompt = build_system_prompt(project_dir)
+
+    # Windows: Claude Code is typically invoked via a .CMD shim (npm global).
+    # Passing literal newlines in --system-prompt can break control protocol init
+    # (Control request timeout: initialize). Flatten to a single line.
+    if sys.platform == "win32":
+        system_prompt = system_prompt.replace("\n", " ")
+
     project_path = Path(project_dir).resolve()
 
     # Build conversation context from history
@@ -183,6 +190,9 @@ Current question: {message}"""
             options=ClaudeAgentOptions(
                 model=resolve_model_id(model),  # Resolve via API Profile if configured
                 system_prompt=system_prompt,
+                # Required for Claude Code control protocol initialization on some platforms
+                # (prevents Control request timeout: initialize)
+                permission_prompt_tool_name="stdio",
                 allowed_tools=[
                     "Read",
                     "Glob",

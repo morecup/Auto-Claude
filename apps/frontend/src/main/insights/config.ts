@@ -4,7 +4,7 @@ import { app } from 'electron';
 import { getProfileEnv } from '../rate-limit-detector';
 import { getAPIProfileEnv } from '../services/profile';
 import { getValidatedPythonPath } from '../python-detector';
-import { getConfiguredPythonPath } from '../python-env-manager';
+import { getConfiguredPythonPath, pythonEnvManager } from '../python-env-manager';
 
 /**
  * Configuration manager for insights service
@@ -110,11 +110,16 @@ export class InsightsConfig {
     const profileEnv = getProfileEnv();
     const apiProfileEnv = await getAPIProfileEnv();
 
+    // Ensure Python can locate bundled/venv dependencies (dotenv, claude_agent_sdk, etc.)
+    // This is required for packaged apps where site-packages is external to the Python prefix.
+    const pythonEnv = pythonEnvManager.getPythonEnv();
+
     return {
       ...process.env as Record<string, string>,
       ...autoBuildEnv,
       ...profileEnv,
       ...apiProfileEnv,
+      ...pythonEnv,
       PYTHONUNBUFFERED: '1',
       PYTHONIOENCODING: 'utf-8',
       PYTHONUTF8: '1'
