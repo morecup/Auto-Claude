@@ -84,10 +84,16 @@ def create_simple_client(
         thinking_level = get_default_thinking_level(agent_type)
         max_thinking_tokens = get_thinking_budget(thinking_level)
 
+    if system_prompt and os.name == "nt":
+        system_prompt = system_prompt.replace("\n", " ")
+
     return ClaudeSDKClient(
         options=ClaudeAgentOptions(
             model=model,
             system_prompt=system_prompt,
+            # Required for Claude Code control protocol initialization on some platforms
+            # (prevents Control request timeout: initialize)
+            permission_prompt_tool_name="stdio",
             allowed_tools=allowed_tools,
             max_turns=max_turns,
             cwd=str(cwd.resolve()) if cwd else None,

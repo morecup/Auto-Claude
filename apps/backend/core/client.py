@@ -724,12 +724,22 @@ def create_client(
             print("   - CLAUDE.md: not found in project root")
     else:
         print("   - CLAUDE.md: disabled by project settings")
+
+    # Windows: Claude Code is often invoked via a .CMD shim (npm global).
+    # Passing literal newlines in --system-prompt can break SDK control protocol init
+    # (Control request timeout: initialize). Flatten to a single line.
+    if os.name == "nt":
+        base_prompt = base_prompt.replace("\n", " ")
+
     print()
 
     # Build options dict, conditionally including output_format
     options_kwargs = {
         "model": model,
         "system_prompt": base_prompt,
+        # Required for Claude Code control protocol initialization on some platforms
+        # (prevents Control request timeout: initialize)
+        "permission_prompt_tool_name": "stdio",
         "allowed_tools": allowed_tools_list,
         "mcp_servers": mcp_servers,
         "hooks": {
